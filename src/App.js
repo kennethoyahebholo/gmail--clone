@@ -1,57 +1,89 @@
-import React from 'react';
-import logo from './logo.svg';
-import { Counter } from './features/counter/Counter';
+import React, { useEffect } from 'react';
 import './App.css';
+import Header from './Header';
+import Sidebar from './Sidebar';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import Mail from './Mail';
+import EmailList from './EmailList';
+import SendMail from './SendMail';
+import { selectSendMessageIsOpen } from './features/mailSlice';
+import { useDispatch, useSelector } from 'react-redux'
+import { login, logout, selectUser } from './features/userSlice';
+import Login from './Login';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { dropDownState, showDropDown } from './features/settingsSlice';
+import { Button } from '@mui/material';
+
 
 function App() {
+  const show = useSelector(dropDownState)
+  const sendMessageIsOpen = useSelector(selectSendMessageIsOpen);
+  const dispatch = useDispatch();
+
+  const userSignOut = () => {
+   signOut(auth)
+   .then((response) => {
+    dispatch(logout())
+    alert('user logged out')
+   })  
+   .catch((error) => console.log(error.message))
+ }
+
+  const user = useSelector(selectUser)
+
+  useEffect(()=>{
+  const unsubscribe = onAuthStateChanged(auth, user => {
+   if(user){
+     dispatch(login({
+      displayName: user.displayName,
+      email: user.email,
+      photoUrl: user.photoURL
+     }))
+   }else{
+
+   }
+  })
+  return () => {
+   unsubscribe()
+  }
+  
+ }, [])
+
+ const userDropDown = () => {
+     dispatch(showDropDown(false
+      )
+      );
+  }
+  
+
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <Counter />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <span>
-          <span>Learn </span>
-          <a
-            className="App-link"
-            href="https://reactjs.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            React
-          </a>
-          <span>, </span>
-          <a
-            className="App-link"
-            href="https://redux.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Redux
-          </a>
-          <span>, </span>
-          <a
-            className="App-link"
-            href="https://redux-toolkit.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Redux Toolkit
-          </a>
-          ,<span> and </span>
-          <a
-            className="App-link"
-            href="https://react-redux.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            React Redux
-          </a>
-        </span>
-      </header>
+    <BrowserRouter>
+    {!user? 
+      <Login/>
+     : 
+      <div className="app">
+      <Header />
+      <div className="app__body" onClick={userDropDown}>
+        <Sidebar/>
+        <Routes>
+          <Route path='/mail' element={<Mail />}/>
+          <Route path='/' element={<EmailList />}/>
+        </Routes>
+      </div> 
+      {sendMessageIsOpen && <SendMail/>}
+      {show && 
+     <div className='userSo'>
+      <Button onClick={userSignOut} className='btn' variant="contained" color="primary">SignOut</Button>
+     </div>
+     }
     </div>
+    }
+      
+    
+    </BrowserRouter>
+    
   );
 }
 
